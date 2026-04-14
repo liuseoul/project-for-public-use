@@ -37,13 +37,15 @@ export default function LoginPage() {
 
     const { data: { user: authedUser } } = await supabase.auth.getUser()
 
-    // Use a dedicated API to determine where to redirect after login.
-    // This avoids session-timing issues when querying profiles client-side
-    // immediately after signInWithPassword.
+    // Get the access token to pass to the server-side post-login API.
+    // Cookie propagation is unreliable immediately after signInWithPassword,
+    // so we authenticate the server call with the token directly.
+    const { data: { session } } = await supabase.auth.getSession()
+
     const res = await fetch('/api/auth/post-login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: authedUser!.id }),
+      body: JSON.stringify({ accessToken: session?.access_token }),
     })
     const json = await res.json()
 

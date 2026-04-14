@@ -1,23 +1,35 @@
 export const runtime = 'edge'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
 /**
  * Called right after client-side signInWithPassword succeeds.
- * Determines where the user should be redirected:
+ * Receives the access token directly (avoids cookie-propagation timing issues).
+ * Determines redirect target:
  *   - super-admin  → { redirect: 'super-admin' }
  *   - normal user  → { redirect: 'groups', groups: [...] }
  */
-export async function POST(_req: Request) {
-  const supabase = await createClient()
+export async function POST(req: Request) {
+  const { accessToken } = await req.json()
+
+  if (!accessToken) {
+    return NextResponse.json({ redirect: 'login' }, { status: 401 })
+  }
+
+  // Create a client authenticated with the user's own token — reliable immediately after login
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
+  )
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ redirect: 'login' }, { status: 401 })
   }
 
-  // Server-side check: is this user a super-admin?
+  // Check super-admin
   const { data: profile } = await supabase
     .from('profiles')
     .select('is_super_admin')

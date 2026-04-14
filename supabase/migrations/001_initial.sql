@@ -137,17 +137,19 @@ CREATE TRIGGER projects_updated_at
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO profiles (id, name, email, role)
+  INSERT INTO public.profiles (id, name, email, role)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
     NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'role', 'member')
+    'member'
   )
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
@@ -382,7 +384,20 @@ CREATE POLICY "组内管理员可物理删除待办" ON todos
   );
 
 -- ============================================================
--- 开启 Realtime
+-- 开启 Realtime（如已存在则忽略）
 -- ============================================================
-ALTER PUBLICATION supabase_realtime ADD TABLE work_records;
-ALTER PUBLICATION supabase_realtime ADD TABLE time_logs;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND tablename = 'work_records'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE work_records;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND tablename = 'time_logs'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE time_logs;
+  END IF;
+END $$;

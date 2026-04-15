@@ -3,13 +3,13 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Sidebar from './Sidebar'
-import { useE3Kit } from '@/lib/useE3Kit'
+import { useE2E } from '@/lib/useE2E'
 import {
-  createVirgilGroup,
-  loadVirgilGroup,
-  addUserToVirgilGroup,
-  removeUserFromVirgilGroup,
-} from '@/lib/e3kit'
+  createAndDistributeGroupKey,
+  getGroupKey,
+  addMemberToGroup,
+  removeMemberFromGroup,
+} from '@/lib/e2e'
 
 const STATUS_LABELS: Record<string, string> = {
   active: '进行中',
@@ -46,32 +46,34 @@ export default function AdminDashboard({
   const isFirstAdmin = profile?.role === 'first_admin'
   const [tab, setTab] = useState<'projects' | 'members'>('projects')
 
-  // ── E3Kit (Virgil E2E encryption) ───────────────────────────
-  const { eThree, ready: eKitReady } = useE3Kit(profile?.id || null)
-  const [virgilGroupReady, setVirgilGroupReady] = useState(false)
+  // ── E2E encryption (NaCl) ───────────────────────────────────
+  const { keyPair, ready: e2eReady } = useE2E(profile?.id || null)
+  const [groupKeyReady, setGroupKeyReady] = useState(false)
 
-  // first_admin sets up the Virgil group once E3Kit is ready
+  // first_admin: create group key if missing, then add any registered members
   useEffect(() => {
-    if (!eThree || !eKitReady || !isFirstAdmin) return
+    if (!keyPair || !e2eReady || !isFirstAdmin) return
 
     const adminId = profile.id as string
     ;(async () => {
-      // Create the Virgil group if it doesn't exist yet
-      let group = await loadVirgilGroup(eThree, groupId, adminId)
-      if (!group) {
-        await createVirgilGroup(eThree, groupId)
+      // Check if group key already exists for admin
+      const existing = await getGroupKey(adminId, groupId, keyPair).catch(() => null)
+      if (!existing) {
+        // First time — generate and distribute group key to all registered members
+        const memberIds = members.filter((m: any) => m.id !== adminId).map((m: any) => m.id)
+        await createAndDistributeGroupKey(adminId, groupId, keyPair, memberIds)
       }
-      setVirgilGroupReady(true)
+      setGroupKeyReady(true)
 
-      // Silently try to add existing members (no-op if not yet registered)
+      // Silently add any registered members who don't have the group key yet
       for (const m of members) {
         if (m.id !== adminId) {
-          await addUserToVirgilGroup(eThree, groupId, adminId, m.id).catch(() => {})
+          await addMemberToGroup(adminId, groupId, keyPair, m.id).catch(() => {})
         }
       }
     })().catch(console.error)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eThree, eKitReady, isFirstAdmin])
+  }, [keyPair, e2eReady, isFirstAdmin])
 
   // ── 新建项目 ────────────────────────────────────────────
   const [projName,      setProjName]      = useState('')
@@ -155,10 +157,10 @@ export default function AdminDashboard({
     if (!res.ok) {
       setMemMsg(`❌ ${json.error || '创建失败'}`)
     } else {
-      // If this admin has E3Kit ready, try to add the new member to the Virgil group.
-      // This silently no-ops if the new member hasn't logged in yet (not registered with Virgil).
-      if (eThree && isFirstAdmin && json.newUserId) {
-        addUserToVirgilGroup(eThree, groupId, profile.id as string, json.newUserId).catch(() => {})
+      // Try to add the new member to the E2E group key immediately.
+      // No-ops if the member hasn't registered their key yet (they will on first login).
+      if (keyPair && isFirstAdmin && json.newUserId) {
+        addMemberToGroup(profile.id as string, groupId, keyPair, json.newUserId).catch(() => {})
       }
       setMemMsg('✅ 成员已创建')
       setMemName(''); setMemEmail(''); setMemPassword(''); setMemRole('member')
@@ -194,9 +196,9 @@ export default function AdminDashboard({
     if (!res.ok) {
       setRemoveMsg(`❌ ${json.error || '操作失败'}`)
     } else {
-      // Remove from Virgil group in background (silently ignores errors)
-      if (eThree && isFirstAdmin) {
-        removeUserFromVirgilGroup(eThree, groupId, profile.id as string, memberId).catch(() => {})
+      // Remove from E2E group key table in background
+      if (isFirstAdmin) {
+        removeMemberFromGroup(groupId, memberId).catch(() => {})
       }
       setTimeout(() => router.refresh(), 400)
     }

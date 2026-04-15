@@ -9,7 +9,12 @@
       "Bash(git add:*)",
       "Bash(git commit -m ':*)",
       "Bash(git push:*)",
-      "Bash(node -e \"const p = require\\('./node_modules/@clerk/nextjs/package.json'\\); console.log\\(p.version\\)\")"
+      "Bash(node -e \"const p = require\\('./node_modules/@clerk/nextjs/package.json'\\); console.log\\(p.version\\)\")",
+      "Bash(xargs cat:*)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(list\\(d.get\\('exports',{}\\).keys\\(\\)\\), indent=2\\)\\)\")",
+      "Bash(xargs grep:*)",
+      "Bash(node -e \"const pkg = require\\('./node_modules/@virgilsecurity/e3kit-browser/package.json'\\); console.log\\(pkg.version, pkg.main, pkg.module\\)\")",
+      "Bash(npm uninstall:*)"
     ]
   }
 }

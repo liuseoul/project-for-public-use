@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import Sidebar from './Sidebar'
 import ProjectDetailPanel from './ProjectDetailPanel'
 import TodoPanel from './TodoPanel'
-import { useE3Kit } from '@/lib/useE3Kit'
+import { useE2E } from '@/lib/useE2E'
 
 const STATUS_LABELS: Record<string, string> = {
   all:       '全部',
@@ -77,8 +77,8 @@ export default function ProjectList({
   const router     = useRouter()
   const isAdmin    = ['first_admin', 'second_admin'].includes(profile?.role || '')
 
-  // Register this user with Virgil E3Kit on first login (silent, background)
-  useE3Kit(profile?.id || null)
+  // Generate/restore user's E2E keypair on first load (silent, background)
+  useE2E(profile?.id || null)
 
   const [filter,     setFilter]     = useState('all')
   const [selectedId, setSelectedId] = useState<string | null>(null)

@@ -145,7 +145,10 @@ export default function SuperAdminDashboard({
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center text-sm font-bold text-white">Q</div>
           <div>
-            <div className="text-sm font-semibold text-gray-900">趋境团 · 超级管理员</div>
+            <div className="text-sm font-semibold text-gray-900 flex items-center gap-1">
+              团队<span className="font-black bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent" style={{fontVariantNumeric:'oldstyle-nums'}}>365</span>
+              <span className="text-gray-400 font-normal ml-1">· 超级管理员</span>
+            </div>
             <div className="text-xs text-gray-400">{profile.name}</div>
           </div>
         </div>

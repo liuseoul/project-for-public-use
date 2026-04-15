@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: '趋境团 | 项目管理',
+  title: '团队365 | 项目管理',
   description: '多团队项目管理平台',
 }
 

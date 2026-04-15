@@ -556,7 +556,9 @@ export default function Sidebar({ profile, groupId, groupName, subdomain }: Side
             <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center text-sm font-bold text-white flex-shrink-0">Q</div>
             <div className="min-w-0">
               <div className="text-sm font-semibold text-gray-900 leading-tight truncate">{groupName}</div>
-              <div className="text-[10px] text-gray-400 mt-0.5">趋境团</div>
+              <div className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-0.5">
+                团队<span className="font-black text-amber-500" style={{fontVariantNumeric:'oldstyle-nums'}}>365</span>
+              </div>
             </div>
           </div>
         </div>

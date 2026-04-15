@@ -10,7 +10,7 @@ export async function POST(_req: Request) {
   const { userId } = await auth()
 
   if (!userId) {
-    return NextResponse.json({ redirect: 'login' }, { status: 401 })
+    return NextResponse.json({ redirect: 'login', _debug: 'no_clerk_userid' }, { status: 401 })
   }
 
   const supabase = createClient(
@@ -27,6 +27,11 @@ export async function POST(_req: Request) {
 
   if (profile?.is_super_admin) {
     return NextResponse.json({ redirect: 'super-admin' })
+  }
+
+  // Temporary debug — remove after fixing
+  if (!profile) {
+    return NextResponse.json({ redirect: 'login', _debug: 'no_profile', _userId: userId }, { status: 401 })
   }
 
   // Fetch group memberships

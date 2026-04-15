@@ -181,7 +181,7 @@ export default function LoginPage() {
       const userGroups: Group[] = json.groups || []
 
       if (userGroups.length === 0) {
-        setError('您尚未加入任何团队，请联系管理员。')
+        setError(`[debug] ${json._debug || 'no_groups'} uid=${json._userId || 'n/a'}`)
         await signIn.create({ identifier: '', password: '' }).catch(() => {})
         setLoading(false); return
       }

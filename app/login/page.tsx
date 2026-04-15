@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSignIn } from '@clerk/nextjs'
+import { useSignIn, useClerk } from '@clerk/nextjs'
 
 type Group = { id: string; name: string; description: string; role: string; subdomain: string | null }
 
@@ -137,7 +137,8 @@ function ArtisticMotto() {
 /* ── Main page ──────────────────────────────────────────────── */
 export default function LoginPage() {
   const router = useRouter()
-  const { signIn, setActive, isLoaded } = useSignIn()
+  const { signIn, isLoaded } = useSignIn()
+  const { setActive } = useClerk()
   const [step, setStep]         = useState<'login' | 'group'>('login')
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')

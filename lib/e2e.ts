@@ -17,6 +17,13 @@ import { createClient } from '@/lib/supabase/client'
 // ── Types ────────────────────────────────────────────────────────────────────
 export type KeyPair = { publicKey: Uint8Array; secretKey: Uint8Array }
 
+// TypeScript 5.x Web Crypto types require ArrayBuffer-backed views (not SharedArrayBuffer).
+// tweetnacl-util's decodeBase64 returns Uint8Array<ArrayBufferLike>.
+// This helper slices into a plain ArrayBuffer so the type checker is satisfied.
+function ab(u: Uint8Array): ArrayBuffer {
+  return u.buffer.slice(u.byteOffset, u.byteOffset + u.byteLength) as ArrayBuffer
+}
+
 // ── Module-level singletons ───────────────────────────────────────────────────
 let _keyPair: KeyPair | null = null
 let _initPromise: Promise<KeyPair> | null = null
@@ -39,7 +46,7 @@ async function deriveEncKey(password: string, salt: Uint8Array): Promise<CryptoK
     'raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']
   )
   return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: 200_000, hash: 'SHA-256' },
+    { name: 'PBKDF2', salt: ab(salt), iterations: 200_000, hash: 'SHA-256' },
     base,
     { name: 'AES-GCM', length: 256 },
     false,
@@ -51,7 +58,7 @@ async function encryptPrivateKey(secretKey: Uint8Array, password: string): Promi
   const salt = crypto.getRandomValues(new Uint8Array(16))
   const iv   = crypto.getRandomValues(new Uint8Array(12))
   const key  = await deriveEncKey(password, salt)
-  const enc  = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, secretKey)
+  const enc  = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: ab(iv) }, key, ab(secretKey))
   return JSON.stringify({
     salt: encodeBase64(salt),
     iv:   encodeBase64(iv),
@@ -64,7 +71,7 @@ async function decryptPrivateKey(json: string, password: string): Promise<Uint8A
     const { salt, iv, data } = JSON.parse(json)
     const key = await deriveEncKey(password, decodeBase64(salt))
     const dec = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv: decodeBase64(iv) }, key, decodeBase64(data)
+      { name: 'AES-GCM', iv: ab(decodeBase64(iv)) }, key, ab(decodeBase64(data))
     )
     return new Uint8Array(dec)
   } catch {

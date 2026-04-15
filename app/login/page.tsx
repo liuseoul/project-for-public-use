@@ -162,6 +162,7 @@ export default function LoginPage() {
       .catch(() => { window.location.href = '/projects' })
   }, [authLoaded, userId])
   const [loading,  setLoading]  = useState(false)
+  const [loadStep, setLoadStep] = useState('')
   const [groups,   setGroups]   = useState<Group[]>([])
 
   async function handleLogin() {
@@ -169,33 +170,34 @@ export default function LoginPage() {
     setLoading(true); setError('')
 
     try {
-      // Sign in with Clerk
+      // Step 1: Authenticate with Clerk
+      setLoadStep('1/3 验证凭据…')
       const result = await signIn.create({
         identifier: email.trim().toLowerCase(),
         password,
       })
 
       if (result.status !== 'complete') {
-        setError('登录未完成，请重试。')
-        setLoading(false); return
+        setError(`登录未完成 (status: ${result.status})，请重试。`)
+        setLoading(false); setLoadStep(''); return
       }
 
-      // Activate session — userId is now live in Clerk's in-memory state
+      // Step 2: Activate session
+      setLoadStep('2/3 激活会话…')
       await setActive({ session: result.createdSessionId })
 
-      // Get userId while still on this page (before any navigation loses memory state)
+      // Step 3: Get routing info
+      setLoadStep('3/3 获取权限…')
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const uid = (window as any).Clerk?.user?.id as string | undefined
       if (!uid) { window.location.href = '/projects'; return }
 
-      // Ask Supabase (via simple API) where to route this user
       const res  = await fetch('/api/auth/get-redirect', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ userId: uid }),
       })
       const { url } = await res.json()
-      // Navigate directly to final destination — no intermediate /projects hop
       window.location.href = url && url !== '/login'
         ? `${url}?_uid=${encodeURIComponent(uid)}`
         : '/login'
@@ -304,7 +306,7 @@ export default function LoginPage() {
                 className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-teal-400
                            text-white font-medium py-2.5 rounded-lg transition-colors duration-150
                            focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2">
-                {loading ? '登录中…' : '登录'}
+                {loading ? (loadStep || '登录中…') : '登录'}
               </button>
             </div>
           </div>

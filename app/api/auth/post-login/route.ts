@@ -1,16 +1,30 @@
 export const runtime = 'edge'
 
 import { createClient } from '@supabase/supabase-js'
-import { clerkClient } from '@clerk/nextjs/server'
-import { auth } from '@clerk/nextjs/server'
+import { verifyToken } from '@clerk/backend'
 import { NextResponse } from 'next/server'
 
-export async function POST(_req: Request) {
-  // Get the authenticated Clerk user from the current session
-  const { userId } = await auth()
+export async function POST(req: Request) {
+  // Extract JWT from Authorization header (passed explicitly by the client)
+  const authHeader = req.headers.get('authorization')
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
+
+  if (!token) {
+    return NextResponse.json({ redirect: 'login', _debug: 'no_token' }, { status: 401 })
+  }
+
+  let userId: string | null = null
+  try {
+    const payload = await verifyToken(token, {
+      secretKey: process.env.CLERK_SECRET_KEY!,
+    })
+    userId = payload.sub
+  } catch (e) {
+    return NextResponse.json({ redirect: 'login', _debug: 'token_invalid', _err: String(e) }, { status: 401 })
+  }
 
   if (!userId) {
-    return NextResponse.json({ redirect: 'login', _debug: 'no_clerk_userid' }, { status: 401 })
+    return NextResponse.json({ redirect: 'login', _debug: 'no_userid' }, { status: 401 })
   }
 
   const supabase = createClient(
@@ -18,7 +32,7 @@ export async function POST(_req: Request) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // Check super-admin flag in profiles table
+  // Check super-admin flag
   const { data: profile } = await supabase
     .from('profiles')
     .select('is_super_admin')

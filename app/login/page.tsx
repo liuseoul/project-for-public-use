@@ -164,12 +164,17 @@ export default function LoginPage() {
       // Activate the Clerk session
       await setActive({ session: result.createdSessionId })
 
-      // Get the Clerk session token to pass to our post-login API
-      const token = await result.createdSessionId
+      // Get the JWT token from the active session and pass it explicitly
+      // (avoids next/headers hang in Cloudflare edge runtime)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const token: string = await (window as any).Clerk?.session?.getToken() ?? ''
 
       const res  = await fetch('/api/auth/post-login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ sessionId: result.createdSessionId }),
       })
       const json = await res.json()

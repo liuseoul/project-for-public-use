@@ -182,22 +182,20 @@ export default function LoginPage() {
         setLoading(false); setLoadStep(''); return
       }
 
-      // Step 2: Activate session
+      // Step 2: Fire setActive without awaiting — it hangs in Clerk v7 due to
+      // client-trust network calls. Session cookie is set synchronously;
+      // the background call completes after we've already navigated.
       setLoadStep('2/3 激活会话…')
-      await setActive({ session: result.createdSessionId })
+      setActive({ session: result.createdSessionId }).catch(() => {})
 
-      // Step 3: Get routing info
+      // Step 3: Route by email (no need for userId — we already have the email)
       setLoadStep('3/3 获取权限…')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const uid = (window as any).Clerk?.user?.id as string | undefined
-      if (!uid) { window.location.href = '/projects'; return }
-
-      const res  = await fetch('/api/auth/get-redirect', {
+      const res = await fetch('/api/auth/get-redirect', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ userId: uid }),
+        body:    JSON.stringify({ email: email.trim().toLowerCase() }),
       })
-      const { url } = await res.json()
+      const { url, uid } = await res.json()
       window.location.href = url && url !== '/login'
         ? `${url}?_uid=${encodeURIComponent(uid)}`
         : '/login'

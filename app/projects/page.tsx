@@ -1,50 +1,32 @@
-export const dynamic = 'force-dynamic'
-export const runtime = 'edge'
+'use client'
 
-import { auth } from '@clerk/nextjs/server'
-import { createClient } from '@supabase/supabase-js'
-import { redirect } from 'next/navigation'
-import { cookies } from 'next/headers'
+import { useEffect } from 'react'
+import { useAuth } from '@clerk/nextjs/legacy'
 
-export default async function ProjectsRedirect() {
-  const { userId } = await auth()
-  if (!userId) redirect('/login')
+export default function ProjectsRedirect() {
+  const { userId, isLoaded } = useAuth()
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  useEffect(() => {
+    if (!isLoaded) return
+
+    if (!userId) {
+      window.location.href = '/login'
+      return
+    }
+
+    fetch('/api/auth/get-redirect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    })
+      .then(r => r.json())
+      .then(({ url }) => { window.location.href = url || '/login' })
+      .catch(() => { window.location.href = '/login' })
+  }, [isLoaded, userId])
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 flex items-center justify-center">
+      <div className="text-white text-lg tracking-wide">正在跳转…</div>
+    </div>
   )
-
-  // Check super-admin
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('is_super_admin')
-    .eq('id', userId)
-    .single()
-
-  if (profile?.is_super_admin) redirect('/super-admin')
-
-  // Look up group from cookie
-  const cookieStore = await cookies()
-  const groupId = cookieStore.get('qt_group')?.value
-
-  if (groupId) {
-    const { data: group } = await supabase
-      .from('groups').select('subdomain').eq('id', groupId).single()
-    if (group?.subdomain) redirect(`/${group.subdomain}/projects`)
-  }
-
-  // Fallback: first group this user is in
-  const { data: membership } = await supabase
-    .from('group_members')
-    .select('group_id, groups(subdomain)')
-    .eq('user_id', userId)
-    .limit(1)
-    .single()
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const subdomain = (membership as any)?.groups?.subdomain
-  if (subdomain) redirect(`/${subdomain}/projects`)
-
-  redirect('/login')
 }

@@ -161,9 +161,12 @@ export default function LoginPage() {
         setLoading(false); return
       }
 
-      // Activate the Clerk session then do a full page reload so the server
-      // component receives the fresh session cookie (client-side nav misses it)
+      // Activate the Clerk session, then wait for the short-lived JWT to be
+      // fetched and written into the __session cookie before navigating.
+      // Without this extra await, the server component receives no token.
       await setActive({ session: result.createdSessionId })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (window as any).Clerk?.session?.getToken()
       window.location.href = '/projects'
     } catch {
       setError('邮箱或密码错误，请联系管理员。')

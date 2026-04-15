@@ -1,7 +1,8 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSignIn } from '@clerk/nextjs/legacy'
+import { useAuth } from '@clerk/nextjs'
 
 type Group = { id: string; name: string; description: string; role: string; subdomain: string | null }
 
@@ -138,10 +139,18 @@ function ArtisticMotto() {
 export default function LoginPage() {
   const router = useRouter()
   const { signIn, setActive, isLoaded } = useSignIn()
+  const { userId, isLoaded: authLoaded } = useAuth()
   const [step, setStep]         = useState<'login' | 'group'>('login')
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [error,    setError]    = useState('')
+
+  // Already logged in — redirect away from login page
+  useEffect(() => {
+    if (authLoaded && userId) {
+      window.location.href = '/projects'
+    }
+  }, [authLoaded, userId])
   const [loading,  setLoading]  = useState(false)
   const [groups,   setGroups]   = useState<Group[]>([])
 

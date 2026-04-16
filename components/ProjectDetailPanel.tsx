@@ -442,7 +442,7 @@ export default function ProjectDetailPanel({
               <button onClick={() => setShowTimeStats(false)} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
             </div>
             {(() => {
-              const nonDeleted = timeLogs.filter((l: any) => !l.deleted)
+              const nonDeleted = displayTimeLogs.filter((l: any) => !l.deleted)
               const totalMins = nonDeleted.reduce((sum: number, l: any) => {
                 if (!l.finished_at) return sum
                 return sum + Math.round((new Date(l.finished_at).getTime() - new Date(l.started_at).getTime()) / 60000)
@@ -455,7 +455,7 @@ export default function ProjectDetailPanel({
               )
             })()}
             <div className="flex-1 overflow-y-auto">
-              {timeLogs.length === 0 ? (
+              {displayTimeLogs.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-12">暂无工时记录</p>
               ) : (
                 <table className="w-full text-xs border-collapse">
@@ -470,7 +470,7 @@ export default function ProjectDetailPanel({
                     </tr>
                   </thead>
                   <tbody>
-                    {[...timeLogs]
+                    {[...displayTimeLogs]
                       .sort((a: any, b: any) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())
                       .map((l: any) => {
                         const dur      = durMinutes(l.started_at, l.finished_at)

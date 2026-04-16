@@ -405,7 +405,17 @@ export default function Sidebar({ profile, groupId, groupName, subdomain }: Side
         .eq('completed_by_name', profile?.name || '')
         .gte('completed_at', s).lte('completed_at', e).order('completed_at', { ascending: true }),
     ])
-    setPersonalRecords(recs || []); setPersonalTimeLogs(logs || []); setPersonalTodos(tdos || [])
+    setPersonalRecords((recs || []).map((r: any) => ({
+      ...r,
+      content: decField(r.content, groupKey),
+      projects: r.projects ? { ...r.projects, name: decField(r.projects.name, groupKey) } : r.projects,
+    })))
+    setPersonalTimeLogs((logs || []).map((l: any) => ({
+      ...l,
+      description: decField(l.description, groupKey),
+      projects: l.projects ? { ...l.projects, name: decField(l.projects.name, groupKey) } : l.projects,
+    })))
+    setPersonalTodos((tdos || []).map((t: any) => ({ ...t, content: decField(t.content, groupKey) })))
     setPersonalLoading(false)
   }
 
@@ -426,7 +436,17 @@ export default function Sidebar({ profile, groupId, groupName, subdomain }: Side
         .eq('completed', true).eq('deleted', false).eq('group_id', groupId)
         .gte('completed_at', s).lte('completed_at', e).order('completed_at', { ascending: true }),
     ])
-    setGroupRecords(recs || []); setGroupTimeLogs(logs || []); setGroupTodos(tdos || [])
+    setGroupRecords((recs || []).map((r: any) => ({
+      ...r,
+      content: decField(r.content, groupKey),
+      projects: r.projects ? { ...r.projects, name: decField(r.projects.name, groupKey) } : r.projects,
+    })))
+    setGroupTimeLogs((logs || []).map((l: any) => ({
+      ...l,
+      description: decField(l.description, groupKey),
+      projects: l.projects ? { ...l.projects, name: decField(l.projects.name, groupKey) } : l.projects,
+    })))
+    setGroupTodos((tdos || []).map((t: any) => ({ ...t, content: decField(t.content, groupKey) })))
     setGroupLoading(false)
   }
 

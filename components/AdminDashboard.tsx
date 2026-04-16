@@ -4,11 +4,13 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Sidebar from './Sidebar'
 import { useE2E } from '@/lib/useE2E'
+import { useGroupKey } from '@/lib/useGroupKey'
 import {
   createAndDistributeGroupKey,
   getGroupKey,
   addMemberToGroup,
   removeMemberFromGroup,
+  encField,
 } from '@/lib/e2e'
 
 const STATUS_LABELS: Record<string, string> = {
@@ -48,6 +50,7 @@ export default function AdminDashboard({
 
   // ── E2E encryption (NaCl) ───────────────────────────────────
   const { keyPair, ready: e2eReady } = useE2E(profile?.id || null)
+  const groupKey = useGroupKey(profile?.id || null, groupId, keyPair)
   const [groupKeyReady, setGroupKeyReady] = useState(false)
 
   // first_admin: create group key if missing, then add any registered members
@@ -121,16 +124,16 @@ export default function AdminDashboard({
     setProjSaving(true); setProjMsg('')
     const parties = collabParties.map(p => p.trim()).filter(Boolean)
     const { error } = await supabase.from('projects').insert({
-      name:                 projName.trim(),
-      client:               projClient.trim(),
-      description:          projDesc.trim(),
-      status:               projStatus,
-      agreement_party:      projAgreement,
-      service_fee_currency: projCurrency,
-      service_fee_amount:   projAmount ? parseFloat(projAmount) : null,
-      collaboration_parties: parties,
-      group_id:             groupId,
-      created_by:           profile.id,
+      name:                  encField(projName.trim(), groupKey) ?? projName.trim(),
+      client:                encField(projClient.trim(), groupKey) ?? projClient.trim(),
+      description:           encField(projDesc.trim() || null, groupKey),
+      status:                projStatus,
+      agreement_party:       encField(projAgreement || null, groupKey),
+      service_fee_currency:  projCurrency,
+      service_fee_amount:    projAmount ? parseFloat(projAmount) : null,
+      collaboration_parties: parties.map((p: string) => encField(p, groupKey) ?? p),
+      group_id:              groupId,
+      created_by:            profile.id,
     })
     if (error) {
       setProjMsg(`❌ 创建失败：${error.message}`)

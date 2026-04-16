@@ -1,6 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useE2E } from '@/lib/useE2E'
+import { useGroupKey } from '@/lib/useGroupKey'
+import { encField, decField } from '@/lib/e2e'
 
 const STATUS_LABELS: Record<string, string> = {
   active: '进行中',
@@ -53,9 +56,14 @@ export default function ProjectDetailPanel({
   onClose: () => void
 }) {
   const supabase = createClient()
+  const { keyPair } = useE2E(profile?.id || null)
+  const groupKey = useGroupKey(profile?.id || null, groupId, keyPair)
+
   const [tab, setTab] = useState<'records' | 'time'>('records')
   const [records, setRecords]         = useState<any[]>([])
   const [timeLogs, setTimeLogs]       = useState<any[]>([])
+  const [displayRecords, setDisplayRecords] = useState<any[]>([])
+  const [displayTimeLogs, setDisplayTimeLogs] = useState<any[]>([])
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [statusChanging, setStatusChanging] = useState(false)
   const [showTimeStats,  setShowTimeStats]  = useState(false)
@@ -112,6 +120,18 @@ export default function ProjectDetailPanel({
     return () => { supabase.removeChannel(channel) }
   }, [project.id])
 
+  useEffect(() => {
+    setDisplayRecords(
+      records.map(r => ({ ...r, content: decField(r.content, groupKey) }))
+    )
+  }, [records, groupKey])
+
+  useEffect(() => {
+    setDisplayTimeLogs(
+      timeLogs.map(l => ({ ...l, description: decField(l.description, groupKey) }))
+    )
+  }, [timeLogs, groupKey])
+
   async function saveRecord() {
     if (!recordContent.trim()) return
     setSavingRecord(true)
@@ -120,7 +140,7 @@ export default function ProjectDetailPanel({
     const { error } = await supabase.from('work_records').insert({
       project_id: project.id,
       group_id:   groupId,
-      content:    recordContent.trim(),
+      content:    encField(recordContent.trim(), groupKey) ?? recordContent.trim(),
       author_id:  profile?.id,
       created_at: createdAt,
     })
@@ -161,7 +181,7 @@ export default function ProjectDetailPanel({
       member_id:   profile?.id,
       started_at:  localDatetime(timeDate, timeStart),
       finished_at: localDatetime(timeDate, timeEnd),
-      description: timeContent.trim(),
+      description: encField(timeContent.trim(), groupKey) ?? timeContent.trim(),
     })
     if (error) { alert('保存失败：' + error.message); setSavingTime(false); return }
     await loadTimeLogs()
@@ -278,10 +298,10 @@ export default function ProjectDetailPanel({
               </button>
             </div>
 
-            {records.length === 0 && (
+            {displayRecords.length === 0 && (
               <p className="text-center text-gray-400 text-sm py-8">暂无工作记录</p>
             )}
-            {records.map((r: any) => {
+            {displayRecords.map((r: any) => {
               const canSoftDelete = !r.deleted
               const canHardDelete = r.deleted && isAdmin
               return (
@@ -335,11 +355,11 @@ export default function ProjectDetailPanel({
               </button>
             </div>
 
-            {timeLogs.length === 0 && (
+            {displayTimeLogs.length === 0 && (
               <p className="text-center text-gray-400 text-sm py-8">暂无工时记录</p>
             )}
 
-            {timeLogs.map((l: any) => {
+            {displayTimeLogs.map((l: any) => {
               const canSoftDelete = !l.deleted
               const canHardDelete = l.deleted && isAdmin
               const dur = durMinutes(l.started_at, l.finished_at)

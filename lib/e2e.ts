@@ -268,3 +268,22 @@ export function resetE2E(): void {
   _initPromise = null
   _groupKeyCache.clear()
 }
+
+// ── Null-safe field helpers ───────────────────────────────────────────────────
+/**
+ * Encrypt a field value. Returns original if groupKey is null (graceful degradation).
+ */
+export function encField(value: string | null | undefined, groupKey: Uint8Array | null): string | null {
+  if (!groupKey || !value) return value ?? null
+  return encryptText(value, groupKey)
+}
+
+/**
+ * Decrypt a field value. Returns original if decryption fails (backward compat with plaintext data).
+ */
+export function decField(value: string | null | undefined, groupKey: Uint8Array | null): string {
+  if (!value) return ''
+  if (!groupKey) return value
+  const result = decryptText(value, groupKey)
+  return result !== null ? result : value
+}

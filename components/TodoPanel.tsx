@@ -1,6 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useE2E } from '@/lib/useE2E'
+import { useGroupKey } from '@/lib/useGroupKey'
+import { encField, decField } from '@/lib/e2e'
 
 const MAX_TOTAL = 25
 const PENDING_BG = ['bg-white', 'bg-gray-50']
@@ -218,7 +221,11 @@ function TodoRow({
 
 export default function TodoPanel({ profile, groupId }: { profile: any; groupId: string }) {
   const supabase = createClient()
+  const { keyPair } = useE2E(profile?.id || null)
+  const groupKey = useGroupKey(profile?.id || null, groupId, keyPair)
+
   const [todos,            setTodos]            = useState<Todo[]>([])
+  const [displayTodos,     setDisplayTodos]     = useState<Todo[]>([])
   const [members,          setMembers]          = useState<Member[]>([])
   const [showAdd,          setShowAdd]          = useState(false)
   const [input,            setInput]            = useState('')
@@ -238,6 +245,10 @@ export default function TodoPanel({ profile, groupId }: { profile: any; groupId:
     loadTodos()
     loadMembers()
   }, [groupId])
+
+  useEffect(() => {
+    setDisplayTodos(todos.map(t => ({ ...t, content: decField(t.content, groupKey) })))
+  }, [todos, groupKey])
 
   async function loadMembers() {
     // Only members of this group
@@ -276,7 +287,7 @@ export default function TodoPanel({ profile, groupId }: { profile: any; groupId:
       ? Math.max(...todos.filter(t => !t.deleted).map(t => t.position)) : -1
     const { error } = await supabase.from('todos').insert(
       items.map((item, i) => ({
-        content:          item.content,
+        content:          encField(item.content, groupKey) ?? item.content,
         assignee_abbrev:  item.abbrev,
         group_id:         groupId,
         created_by:       profile?.id || null,
@@ -318,7 +329,7 @@ export default function TodoPanel({ profile, groupId }: { profile: any; groupId:
     if (!editContent.trim()) { alert('内容不能为空'); return }
     setEditSaving(true)
     const { error } = await supabase.from('todos').update({
-      content:           editContent.trim(),
+      content:           encField(editContent.trim(), groupKey) ?? editContent.trim(),
       assignee_abbrev:   nameToAbbrev(editAssignee1),
       assignee_abbrev_2: nameToAbbrev(editAssignee2) || null,
     }).eq('id', id).eq('group_id', groupId)
@@ -354,15 +365,15 @@ export default function TodoPanel({ profile, groupId }: { profile: any; groupId:
     await loadTodos()
   }
 
-  const uncompleted = todos
+  const uncompleted = displayTodos
     .filter(t => !t.completed && !t.deleted)
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
-  const completed = todos
+  const completed = displayTodos
     .filter(t => t.completed && !t.deleted)
     .sort((a, b) => new Date(b.completed_at!).getTime() - new Date(a.completed_at!).getTime())
 
-  const deletedTodos = todos
+  const deletedTodos = displayTodos
     .filter(t => t.deleted)
     .sort((a, b) => new Date(b.deleted_at ?? b.created_at).getTime() - new Date(a.deleted_at ?? a.created_at).getTime())
 
@@ -399,7 +410,7 @@ export default function TodoPanel({ profile, groupId }: { profile: any; groupId:
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
-        {uncompleted.length === 0 && completed.length === 0 && deletedTodos.length === 0 && (
+        {displayTodos.length === 0 && (
           <p className="text-xs text-gray-400 text-center py-8">暂无待办事项</p>
         )}
 

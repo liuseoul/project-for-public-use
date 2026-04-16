@@ -3,6 +3,9 @@ import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useClerk } from '@clerk/nextjs'
+import { useE2E } from '@/lib/useE2E'
+import { useGroupKey } from '@/lib/useGroupKey'
+import { encField, decField } from '@/lib/e2e'
 
 const TYPE_LABELS: Record<string, string> = {
   online_meeting:     '线上会议',
@@ -188,11 +191,15 @@ export default function Sidebar({ profile, groupId, groupName, subdomain }: Side
   const supabase = createClient()
   const { signOut } = useClerk()
 
+  const { keyPair } = useE2E(profile?.id || null)
+  const groupKey = useGroupKey(profile?.id || null, groupId, keyPair)
+
   const isAdmin    = ['first_admin', 'second_admin'].includes(profile?.role || '')
   const todayStr   = new Date().toISOString().split('T')[0]
 
   const [currentUserId,   setCurrentUserId]   = useState<string | null>(null)
   const [reminders,       setReminders]       = useState<Reminder[]>([])
+  const [displayReminders, setDisplayReminders] = useState<Reminder[]>([])
   const [members,         setMembers]         = useState<Member[]>([])
   const [myGroups,        setMyGroups]        = useState<GroupInfo[]>([])
   const [showGroupPicker, setShowGroupPicker] = useState(false)
@@ -252,6 +259,10 @@ export default function Sidebar({ profile, groupId, groupName, subdomain }: Side
     if (!error) setReminders(data || [])
   }
 
+  useEffect(() => {
+    setDisplayReminders(reminders.map(r => ({ ...r, content: decField(r.content, groupKey) })))
+  }, [reminders, groupKey])
+
   async function loadMembers() {
     const { data } = await supabase
       .from('group_members')
@@ -283,13 +294,13 @@ export default function Sidebar({ profile, groupId, groupName, subdomain }: Side
     router.refresh()
   }
 
-  const upcoming = reminders
+  const upcoming = displayReminders
     .filter(r => !r.deleted && remEndDate(r) >= todayStr)
     .sort((a, b) => remPrimaryDate(a).localeCompare(remPrimaryDate(b)))
-  const past = reminders
+  const past = displayReminders
     .filter(r => !r.deleted && remEndDate(r) < todayStr)
     .sort((a, b) => remPrimaryDate(b).localeCompare(remPrimaryDate(a)))
-  const deletedRems = reminders
+  const deletedRems = displayReminders
     .filter(r => r.deleted)
     .sort((a, b) => (b.deleted_at ?? remPrimaryDate(b)).localeCompare(a.deleted_at ?? remPrimaryDate(a)))
 
@@ -303,7 +314,7 @@ export default function Sidebar({ profile, groupId, groupName, subdomain }: Side
     setRemSaving(true)
     const { error } = await supabase.from('reminders').insert({
       due_date: remStartDate, start_date: remStartDate, end_date: remEndDate_,
-      content: remContent.trim(), type: remType,
+      content: encField(remContent.trim(), groupKey) ?? remContent.trim(), type: remType,
       start_time: remStartTime || null, end_time: remEndTime || null,
       assigned_to_name: remAssigned || null,
       group_id: groupId,
@@ -340,7 +351,7 @@ export default function Sidebar({ profile, groupId, groupName, subdomain }: Side
     setEditSaving(true)
     const { error } = await supabase.from('reminders').update({
       due_date: editStartDate, start_date: editStartDate, end_date: editEndDate_,
-      content: editContent.trim(), type: editType,
+      content: encField(editContent.trim(), groupKey) ?? editContent.trim(), type: editType,
       start_time: editStartTime || null, end_time: editEndTime || null,
       assigned_to_name: editAssigned || null,
     }).eq('id', selectedRem!.id).eq('group_id', groupId)
@@ -644,7 +655,7 @@ export default function Sidebar({ profile, groupId, groupName, subdomain }: Side
                 {deletedRems.map((r, i) => <ReminderRow key={r.id} r={r} index={i} variant="deleted" />)}
               </>
             )}
-            {reminders.length === 0 && <p className="text-xs text-gray-400 text-center py-4">暂无日程</p>}
+            {displayReminders.length === 0 && <p className="text-xs text-gray-400 text-center py-4">暂无日程</p>}
           </div>
         </div>
 

@@ -1,11 +1,13 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Sidebar from './Sidebar'
 import ProjectDetailPanel from './ProjectDetailPanel'
 import TodoPanel from './TodoPanel'
 import { useE2E } from '@/lib/useE2E'
+import { useGroupKey } from '@/lib/useGroupKey'
+import { encField, decField } from '@/lib/e2e'
 
 const STATUS_LABELS: Record<string, string> = {
   all:       '全部',
@@ -78,7 +80,8 @@ export default function ProjectList({
   const isAdmin    = ['first_admin', 'second_admin'].includes(profile?.role || '')
 
   // Generate/restore user's E2E keypair on first load (silent, background)
-  useE2E(profile?.id || null)
+  const { keyPair } = useE2E(profile?.id || null)
+  const groupKey = useGroupKey(profile?.id || null, groupId, keyPair)
 
   const [filter,     setFilter]     = useState('all')
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -86,6 +89,22 @@ export default function ProjectList({
   const [editProject, setEditProject] = useState<any | null>(null)
   const [form,        setForm]        = useState<EditForm>(EMPTY_FORM)
   const [saving,      setSaving]      = useState(false)
+
+  const [displayProjects, setDisplayProjects] = useState<any[]>(projects)
+
+  useEffect(() => {
+    if (!groupKey) return
+    setDisplayProjects(projects.map((p: any) => ({
+      ...p,
+      name:        decField(p.name, groupKey),
+      client:      decField(p.client, groupKey),
+      description: decField(p.description, groupKey),
+      agreement_party: decField(p.agreement_party, groupKey),
+      collaboration_parties: Array.isArray(p.collaboration_parties)
+        ? p.collaboration_parties.map((c: string) => decField(c, groupKey))
+        : p.collaboration_parties,
+    })))
+  }, [groupKey, projects])
 
   function openEdit(e: React.MouseEvent, project: any) {
     e.stopPropagation()
@@ -111,16 +130,17 @@ export default function ProjectList({
   async function saveEdit() {
     if (!form.name.trim()) { alert('项目名称不能为空'); return }
     setSaving(true)
+    const parties = form.collaboration_parties
+      ? form.collaboration_parties.split(/[,，]/).map(s => s.trim()).filter(Boolean)
+      : []
     const { error } = await supabase.from('projects').update({
-      name:                  form.name.trim(),
-      client:                form.client.trim() || null,
-      description:           form.description.trim() || null,
-      agreement_party:       form.agreement_party.trim() || null,
+      name:                  encField(form.name.trim(), groupKey) ?? form.name.trim(),
+      client:                encField(form.client.trim() || null, groupKey),
+      description:           encField(form.description.trim() || null, groupKey),
+      agreement_party:       encField(form.agreement_party.trim() || null, groupKey),
       service_fee_currency:  form.service_fee_currency.trim() || null,
       service_fee_amount:    form.service_fee_amount ? parseFloat(form.service_fee_amount) : null,
-      collaboration_parties: form.collaboration_parties
-        ? form.collaboration_parties.split(/[,，]/).map(s => s.trim()).filter(Boolean)
-        : [],
+      collaboration_parties: parties.map(p => encField(p, groupKey) ?? p),
       status:                form.status,
     }).eq('id', editProject.id).eq('group_id', groupId)
     setSaving(false)
@@ -155,8 +175,8 @@ export default function ProjectList({
     return [...active, ...delayed]
   }
 
-  const filtered        = sorted(filter === 'all' ? projects : projects.filter((p: any) => p.status === filter))
-  const selectedProject = projects.find((p: any) => p.id === selectedId) || null
+  const filtered        = sorted(filter === 'all' ? displayProjects : displayProjects.filter((p: any) => p.status === filter))
+  const selectedProject = displayProjects.find((p: any) => p.id === selectedId) || null
 
   const STATUS_EDIT = [
     { value: 'active',    label: '进行中' },
@@ -199,7 +219,7 @@ export default function ProjectList({
               )}
             </button>
           ))}
-          <span className="ml-auto text-xs text-gray-400">共 {filtered.length} 个项目</span>
+          <span className="ml-auto text-xs text-gray-400">共 {projects.length} 个项目</span>
         </div>
 
         {/* Project list */}

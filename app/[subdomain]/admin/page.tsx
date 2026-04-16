@@ -3,6 +3,7 @@ export const runtime = 'edge'
 
 import { auth } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import AdminDashboard from '@/components/AdminDashboard'
 
@@ -16,7 +17,14 @@ export default async function SubdomainAdminPage({
   const { subdomain } = await params
   const { _uid } = await searchParams
 
+  // Prefer _uid param, then qt_uid cookie, then Clerk auth() as last resort
   let userId: string | null = _uid || null
+  if (!userId) {
+    const cookieStore = await cookies()
+    userId = cookieStore.get('qt_uid')?.value
+      ? decodeURIComponent(cookieStore.get('qt_uid')!.value)
+      : null
+  }
   if (!userId) {
     const { userId: clerkUserId } = await auth()
     userId = clerkUserId

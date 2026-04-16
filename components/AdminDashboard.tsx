@@ -117,7 +117,6 @@ export default function AdminDashboard({
   async function createProject() {
     if (!projName.trim() || !projClient.trim()) { setProjMsg('❌ 项目名称和委托方为必填'); return }
     setProjSaving(true); setProjMsg('')
-    const { data: { user } } = await supabase.auth.getUser()
     const parties = collabParties.map(p => p.trim()).filter(Boolean)
     const { error } = await supabase.from('projects').insert({
       name:                 projName.trim(),
@@ -129,7 +128,7 @@ export default function AdminDashboard({
       service_fee_amount:   projAmount ? parseFloat(projAmount) : null,
       collaboration_parties: parties,
       group_id:             groupId,
-      created_by:           user!.id,
+      created_by:           profile.id,
     })
     if (error) {
       setProjMsg(`❌ 创建失败：${error.message}`)

@@ -236,10 +236,9 @@ export default function Sidebar({ profile, groupId, groupName, subdomain }: Side
   const [groupTodos,     setGroupTodos]     = useState<any[]>([])
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setCurrentUserId(user?.id || null)
-      if (user) loadMyGroups(user.id)
-    })
+    const uid = profile?.id || null
+    setCurrentUserId(uid)
+    if (uid) loadMyGroups(uid)
     loadReminders()
     loadMembers()
   }, [groupId])
@@ -302,14 +301,13 @@ export default function Sidebar({ profile, groupId, groupName, subdomain }: Side
     if (remEndDate_ < remStartDate) { alert('结束日期不能早于开始日期'); return }
     if (remEndTime && remStartTime && remEndTime <= remStartTime) { alert('结束时间必须晚于开始时间'); return }
     setRemSaving(true)
-    const { data: { user } } = await supabase.auth.getUser()
     const { error } = await supabase.from('reminders').insert({
       due_date: remStartDate, start_date: remStartDate, end_date: remEndDate_,
       content: remContent.trim(), type: remType,
       start_time: remStartTime || null, end_time: remEndTime || null,
       assigned_to_name: remAssigned || null,
       group_id: groupId,
-      created_by: user!.id,
+      created_by: profile!.id,
     })
     if (error) { alert('保存失败：' + error.message) }
     else { setShowAddRem(false); resetAddForm(); await loadReminders() }
@@ -353,10 +351,9 @@ export default function Sidebar({ profile, groupId, groupName, subdomain }: Side
 
   async function softDeleteReminder(id: string) {
     if (!confirm('确认删除该日程？删除后仍可在历史记录中查看。')) return
-    const { data: { user } } = await supabase.auth.getUser()
-    const { data: prof } = await supabase.from('profiles').select('name').eq('id', user!.id).single()
+    const { data: prof } = await supabase.from('profiles').select('name').eq('id', profile!.id).single()
     const { error } = await supabase.from('reminders').update({
-      deleted: true, deleted_by: user!.id,
+      deleted: true, deleted_by: profile!.id,
       deleted_by_name: prof?.name || '未知', deleted_at: new Date().toISOString(),
     }).eq('id', id).eq('group_id', groupId)
     if (error) { alert('删除失败：' + error.message); return }

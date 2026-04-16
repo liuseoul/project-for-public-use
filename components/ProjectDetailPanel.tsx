@@ -97,7 +97,7 @@ export default function ProjectDetailPanel({
   }
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setCurrentUserId(user?.id || null))
+    setCurrentUserId(profile?.id || null)
     loadRecords()
     loadTimeLogs()
 
@@ -115,14 +115,13 @@ export default function ProjectDetailPanel({
   async function saveRecord() {
     if (!recordContent.trim()) return
     setSavingRecord(true)
-    const { data: { user } } = await supabase.auth.getUser()
     const [y, mo, d] = recordDate.split('-').map(Number)
     const createdAt = new Date(y, mo - 1, d, 12, 0, 0).toISOString()
     const { error } = await supabase.from('work_records').insert({
       project_id: project.id,
       group_id:   groupId,
       content:    recordContent.trim(),
-      author_id:  user!.id,
+      author_id:  profile?.id,
       created_at: createdAt,
     })
     if (error) { alert('保存失败：' + error.message); setSavingRecord(false); return }
@@ -135,10 +134,9 @@ export default function ProjectDetailPanel({
 
   async function softDeleteRecord(id: string) {
     if (!confirm('确认标记该记录为已删除？')) return
-    const { data: { user } } = await supabase.auth.getUser()
-    const { data: prof } = await supabase.from('profiles').select('name').eq('id', user!.id).single()
+    const { data: prof } = await supabase.from('profiles').select('name').eq('id', profile?.id).single()
     const { error } = await supabase.from('work_records').update({
-      deleted: true, deleted_by: user!.id,
+      deleted: true, deleted_by: profile?.id || null,
       deleted_by_name: prof?.name || '未知',
       deleted_at: new Date().toISOString(),
     }).eq('id', id).eq('group_id', groupId)
@@ -157,11 +155,10 @@ export default function ProjectDetailPanel({
     if (!timeDate || !timeStart || !timeEnd) { alert('请填写日期和时间'); return }
     if (timeEnd <= timeStart) { alert('结束时间必须晚于开始时间'); return }
     setSavingTime(true)
-    const { data: { user } } = await supabase.auth.getUser()
     const { error } = await supabase.from('time_logs').insert({
       project_id:  project.id,
       group_id:    groupId,
-      member_id:   user!.id,
+      member_id:   profile?.id,
       started_at:  localDatetime(timeDate, timeStart),
       finished_at: localDatetime(timeDate, timeEnd),
       description: timeContent.trim(),
@@ -178,10 +175,9 @@ export default function ProjectDetailPanel({
 
   async function softDeleteTimeLog(id: string) {
     if (!confirm('确认标记该工时记录为已删除？')) return
-    const { data: { user } } = await supabase.auth.getUser()
-    const { data: prof } = await supabase.from('profiles').select('name').eq('id', user!.id).single()
+    const { data: prof } = await supabase.from('profiles').select('name').eq('id', profile?.id).single()
     const { error } = await supabase.from('time_logs').update({
-      deleted: true, deleted_by: user!.id,
+      deleted: true, deleted_by: profile?.id || null,
       deleted_by_name: prof?.name || '未知',
       deleted_at: new Date().toISOString(),
     }).eq('id', id).eq('group_id', groupId)

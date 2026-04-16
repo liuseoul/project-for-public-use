@@ -234,7 +234,7 @@ export default function TodoPanel({ profile, groupId }: { profile: any; groupId:
   const isAdmin = profile?.role === 'admin'
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setCurrentUserId(user?.id || null))
+    setCurrentUserId(profile?.id || null)
     loadTodos()
     loadMembers()
   }, [groupId])
@@ -272,7 +272,6 @@ export default function TodoPanel({ profile, groupId }: { profile: any; groupId:
     const items = parseItems(input, members)
     if (items.length === 0) { alert('未检测到有效条目'); return }
     setSaving(true)
-    const { data: { user } } = await supabase.auth.getUser()
     const maxPos = todos.filter(t => !t.deleted).length > 0
       ? Math.max(...todos.filter(t => !t.deleted).map(t => t.position)) : -1
     const { error } = await supabase.from('todos').insert(
@@ -280,7 +279,7 @@ export default function TodoPanel({ profile, groupId }: { profile: any; groupId:
         content:          item.content,
         assignee_abbrev:  item.abbrev,
         group_id:         groupId,
-        created_by:       user!.id,
+        created_by:       profile?.id || null,
         position:         maxPos + 1 + i,
       }))
     )
@@ -291,8 +290,7 @@ export default function TodoPanel({ profile, groupId }: { profile: any; groupId:
 
   async function markDone(todo: Todo) {
     if (todo.deleted || todo.completed) return
-    const { data: { user } } = await supabase.auth.getUser()
-    const { data: prof } = await supabase.from('profiles').select('name').eq('id', user!.id).single()
+    const { data: prof } = await supabase.from('profiles').select('name').eq('id', profile?.id).single()
     await supabase.from('todos').update({
       completed: true, completed_at: new Date().toISOString(), completed_by_name: prof?.name || '',
     }).eq('id', todo.id).eq('group_id', groupId)
@@ -332,10 +330,9 @@ export default function TodoPanel({ profile, groupId }: { profile: any; groupId:
 
   async function softDeleteTodo(id: string) {
     if (!confirm('确认删除该待办事项？')) return
-    const { data: { user } } = await supabase.auth.getUser()
-    const { data: prof } = await supabase.from('profiles').select('name').eq('id', user!.id).single()
+    const { data: prof } = await supabase.from('profiles').select('name').eq('id', profile?.id).single()
     const { error } = await supabase.from('todos').update({
-      deleted: true, deleted_by: user!.id,
+      deleted: true, deleted_by: profile?.id || null,
       deleted_by_name: prof?.name || '未知', deleted_at: new Date().toISOString(),
     }).eq('id', id).eq('group_id', groupId)
     if (error) { alert('删除失败：' + error.message); return }

@@ -154,9 +154,11 @@ export default function LoginPage() {
       body: JSON.stringify({ userId }),
     })
       .then(r => r.json())
-      .then(({ url }) => {
+      .then(({ url, uid: resolvedUid }) => {
+        const finalUid = resolvedUid || userId
+        if (finalUid) document.cookie = `qt_uid=${encodeURIComponent(finalUid)}; path=/; max-age=86400; SameSite=Lax`
         window.location.href = url && url !== '/login'
-          ? `${url}?_uid=${encodeURIComponent(userId)}`
+          ? `${url}?_uid=${encodeURIComponent(finalUid)}`
           : '/login'
       })
       .catch(() => { window.location.href = '/projects' })
@@ -196,6 +198,7 @@ export default function LoginPage() {
         body:    JSON.stringify({ email: email.trim().toLowerCase() }),
       })
       const { url, uid } = await res.json()
+      if (uid) document.cookie = `qt_uid=${encodeURIComponent(uid)}; path=/; max-age=86400; SameSite=Lax`
       window.location.href = url && url !== '/login'
         ? `${url}?_uid=${encodeURIComponent(uid)}`
         : '/login'

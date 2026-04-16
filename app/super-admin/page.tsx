@@ -3,6 +3,7 @@ export const runtime = 'edge'
 
 import { auth } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import SuperAdminDashboard from '@/components/SuperAdminDashboard'
 
@@ -13,9 +14,14 @@ export default async function SuperAdminPage({
 }) {
   const { _uid } = await searchParams
 
-  // Use _uid passed from client redirect (avoids Clerk JWKS hang on first load)
-  // Fall back to auth() for direct navigation / refreshes
+  // Prefer _uid param, then qt_uid cookie, then Clerk auth() as last resort
   let userId: string | null = _uid || null
+  if (!userId) {
+    const cookieStore = await cookies()
+    userId = cookieStore.get('qt_uid')?.value
+      ? decodeURIComponent(cookieStore.get('qt_uid')!.value)
+      : null
+  }
   if (!userId) {
     const { userId: clerkUserId } = await auth()
     userId = clerkUserId

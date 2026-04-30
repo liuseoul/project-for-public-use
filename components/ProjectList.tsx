@@ -265,8 +265,8 @@ export default function ProjectList({
           {/* Task 4: 项目统计 button */}
           <button
             onClick={() => { setStatsStart(''); setStatsEnd(''); setShowProjStats(true) }}
-            className="px-4 py-1.5 rounded-full text-sm font-medium border border-teal-500 text-teal-600
-                       hover:bg-teal-50 transition-colors duration-150"
+            className="px-4 py-1.5 rounded-full text-sm font-medium bg-teal-500 text-white
+                       hover:bg-teal-600 transition-colors duration-150"
           >
             项目统计
           </button>
@@ -274,8 +274,8 @@ export default function ProjectList({
           {/* Task 8: 项目排序 button */}
           <button
             onClick={() => { setPendingSortMode(sortMode); setShowSortModal(true) }}
-            className="px-4 py-1.5 rounded-full text-sm font-medium border border-gray-400 text-gray-600
-                       hover:bg-gray-100 transition-colors duration-150"
+            className="px-4 py-1.5 rounded-full text-sm font-medium bg-indigo-500 text-white
+                       hover:bg-indigo-600 transition-colors duration-150"
           >
             项目排序
           </button>

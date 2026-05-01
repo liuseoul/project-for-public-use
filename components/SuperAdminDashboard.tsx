@@ -192,7 +192,7 @@ export default function SuperAdminDashboard({
             {/* ── Create Group + First-Admin ──────────────────────── */}
             <section className="bg-white rounded-xl border border-gray-200 p-6">
               <h2 className="text-base font-semibold text-gray-900 mb-1">创建团队及负责人</h2>
-              <p className="text-xs text-gray-500 mb-5">创建后，负责人可通过其邮箱和初始密码登录，访问路径为 tuandui365.com/<span className="font-mono text-teal-600">{previewSubdomain || '…'}</span></p>
+              <p className="text-xs text-gray-500 mb-5">创建后，负责人可通过其邮箱和初始密码登录，访问路径为 teaming365.com/<span className="font-mono text-teal-600">{previewSubdomain || '…'}</span></p>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -225,7 +225,7 @@ export default function SuperAdminDashboard({
                 {previewSubdomain && (
                   <div className="col-span-2">
                     <div className="text-xs text-gray-500 bg-gray-50 rounded-lg px-4 py-2.5 border border-gray-200">
-                      团队访问路径：<span className="font-mono font-semibold text-teal-700">tuandui365.com/{previewSubdomain}</span>
+                      团队访问路径：<span className="font-mono font-semibold text-teal-700">teaming365.com/{previewSubdomain}</span>
                     </div>
                   </div>
                 )}

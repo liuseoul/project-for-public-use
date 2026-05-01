@@ -1,10 +1,10 @@
-name = "project-for-public-use"
+name = "teaming365"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
 pages_build_output_dir = ".vercel/output/static"
 
 [vars]
-NEXT_PUBLIC_SUPABASE_URL = "https://kcdsjpydtoslllmwutfy.supabase.co"
-NEXT_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_jvlve7DV0RTxZNQ1dv98EQ_2BjiyobX"
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_test_c3RhYmxlLXNrdW5rLTgxLmNsZXJrLmFjY291bnRzLmRldiQ"
+NEXT_PUBLIC_SUPABASE_URL = "https://ninmbrxzbdaweessdgty.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_v4kecbucljf9UKmaaZ9e_Q_5Ljth13W"
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsudGVhbWluZzM2NS5jb20k"

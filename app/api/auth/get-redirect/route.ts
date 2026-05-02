@@ -51,5 +51,6 @@ export async function POST(req: Request) {
   const subdomain = (membership as any)?.groups?.subdomain
   if (subdomain) return NextResponse.json({ url: `/${subdomain}/projects`, uid })
 
-  return NextResponse.json({ url: '/login', uid })
+  // Profile exists but no group assigned yet — self-registered user awaiting admin
+  return NextResponse.json({ url: '/pending', uid })
 }
